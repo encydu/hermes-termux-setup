@@ -1,29 +1,35 @@
 #!/data/data/com.termux/files/usr/bin/bash
 # ============================================================================
-#  Hermes + 9Router — Auto-Install & Auto-Config untuk Termux (Android)
+#  setup-hermes-9router.sh — Hermes + 9Router Auto-Install untuk Termux (Android)
 #  Jalankan:  bash setup-hermes-9router.sh
 #
-#  Yang dilakukan:
-#    - Install Hermes Agent (jalur resmi Termux)
-#    - Install 9Router (router model, global npm)
-#    - Auto-set config Hermes ke endpoint tunnel + API key + model Enuma
-#      ( jadi Hermes langsung hidup begitu dibuka, tanpa ketik ulang )
+#  Pendekatan ini TIDAK curl installer Hermes. Ia:
+#    1. Tambahkan repo AdyBag (native Termux) + verifikasi signing key (lokal)
+#    2. Install Hermes dari paket native:  pkg install hermes-agent
+#    3. Install 9Router (router model) via npm
+#    4. Auto-config Hermes ke tunnel provider + API key + model Enuma
+#
+#  Kelebihan: Hermes terpasang sebagai PAKET NATIVE (pkg), bukan kompilasi —
+#  jauh lebih cocok untuk HP kentang dan tanpa dependensi Rust/Python.
 # ============================================================================
-set -e   # hentikan kalau ada error, jangan lanjut ke tahap yang rusak
+set -Eeuo pipefail
+
+# --- Lokasi file di repo ini ---
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+REPO_SETUP="$SCRIPT_DIR/setup_apt_repo.sh"
 
 echo "==> 1/5 Update repositori Termux"
-pkg update -y
+pkg update -y 2>/dev/null || true
 pkg upgrade -y
 
-echo "==> 2/5 Install dependensi Hermes + Node (untuk 9Router)"
-pkg install -y git python clang rust make pkg-config libffi openssl \
-               nodejs-lts ripgrep ffmpeg curl wget
-export PATH="$PREFIX/bin:$PATH"
+echo "==> 2/5 Tambah repo AdyBag (native) + verifikasi signing key"
+bash "$REPO_SETUP"
 
-echo "==> 3/5 Install Hermes Agent (jalur resmi Termux)"
-curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+echo "==> 3/5 Install Hermes dari paket native"
+pkg install -y hermes-agent
 
 echo "==> 4/5 Install 9Router (global npm)"
+pkg install -y nodejs-lts ripgrep ffmpeg curl wget 2>/dev/null || true
 npm install -g 9router
 
 echo "==> 5/5 Auto-config Hermes -> tunnel provider + model Enuma"
@@ -40,10 +46,10 @@ sleep 3
 
 echo ""
 echo "============================================================"
-echo "  SELESAI. Sekarang tinggal:"
+echo "  SELESAI. Langkah berikut:"
 echo "============================================================"
 echo ""
-echo "  Masuk Hermes (mulai dari sini):"
+echo "  Masuk Hermes:"
 echo "        hermes"
 echo ""
 echo "  Config sudah ke tunnel (base_url + key + Enuma)."
